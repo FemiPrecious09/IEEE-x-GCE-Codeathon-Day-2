@@ -1,158 +1,578 @@
-Notes API
-A RESTful CRUD API for managing notes, built with Node.js and Express.
-Submitted for Day 1 of the IEEE × GitHub Campus Experts Codeathon — Backend Track. Focus: HTTP fundamentals, clean REST design, semantic status codes, and defensive engineering.
+# Notes API — Day 2
 
-Features
+A RESTful CRUD API for managing notes, built with **Node.js**, **Express**, and **PostgreSQL**.
 
-Full CRUD operations on notes (POST, GET, PUT, PATCH, DELETE)
-In-memory storage seeded with sample data
-Semantic HTTP status codes (200, 201, 204, 400, 404, 500)
-Pagination and sorting on the list endpoint
-Custom request-logging middleware
-Global 404 route handler and centralized error handler
-Clean modular layout (routes / controllers / data)
+This project extends the Day 1 version by introducing:
 
+* Persistent database storage with PostgreSQL
+* User authentication with JWT
+* Password hashing using bcrypt
+* Protected routes and user-scoped notes
+* Better project structure and centralized error handling
 
-Tech Stack
+Built for the IEEE × GitHub Campus Experts Codeathon — Backend Track.
 
-Node.js (v18+)
-Express — HTTP routing and middleware
-dotenv — environment variable loading
-crypto — UUID generation (Node built-in)
+---
 
+# Table of Contents
 
-Project Structure
+1. [Features](#features)
+2. [Tech Stack](#tech-stack)
+3. [Project Structure](#project-structure)
+4. [Database Schema](#database-schema)
+5. [Getting Started](#getting-started)
+6. [Environment Variables](#environment-variables)
+7. [Running the Server](#running-the-server)
+8. [Authentication Flow](#authentication-flow)
+9. [API Endpoints](#api-endpoints)
+10. [Status Codes](#status-codes)
+11. [Design Decisions](#design-decisions)
+12. [Request Logging](#request-logging)
+13. [Testing](#testing)
+14. [Author](#author)
+
+---
+
+# Features
+
+## Authentication
+
+* User registration
+* User login
+* JWT-based authentication
+* Password hashing with bcrypt
+* Protected routes using middleware
+
+## Notes Management
+
+* Create notes
+* Read all notes
+* Read a single note
+* Replace a note with PUT
+* Partially update a note with PATCH
+* Delete notes
+
+## Database Features
+
+* PostgreSQL persistence
+* UUID-based public identifiers
+* Foreign-key relationships
+* Automatic timestamps
+* Unique username constraint
+
+## Engineering Features
+
+* Centralized error handling
+* Request logging middleware
+* Modular folder structure
+* Semantic HTTP status codes
+
+---
+
+# Tech Stack
+
+| Technology   | Purpose                         |
+| ------------ | ------------------------------- |
+| Node.js      | JavaScript runtime              |
+| Express      | Routing and middleware          |
+| PostgreSQL   | Relational database             |
+| pg           | PostgreSQL client for Node.js   |
+| bcryptjs     | Password hashing                |
+| jsonwebtoken | JWT generation and verification |
+| dotenv       | Environment variable management |
+
+---
+
+# Project Structure
+
+```txt
 .
 ├── controllers/
-│   └── notes_controller.js   # Route handler logic
+│   ├── auth_controller.js
+│   └── notes_controller.js
+│
 ├── routes/
-│   └── notes.js              # Express router for /notes
+│   ├── auth_route.js
+│   └── notes_route.js
+│
+├── models/
+│   ├── auth_model.js
+│   └── note_model.js
+│
+├── middlewares/
+│   ├── auth.js
+│   └── error.js
+│
 ├── db/
-│   └── database.js           # In-memory notes array (seeded)
-├── server.js                 # App entry point + global middleware
-├── .env                      # Environment variables (not committed)
-├── .env.example              # Template for env vars
+│   ├── database.js
+│   └── setup.js
+│
+├── server.js
+├── .env
+├── .env.example
 ├── package.json
 └── README.md
+```
 
-Setup
-1. Clone the repo
-bashgit clone <your-repo-url>
+---
+
+# Database Schema
+
+## Profile Table
+
+| Column    | Type         | Constraints            |
+| --------- | ------------ | ---------------------- |
+| id        | SERIAL       | Primary Key            |
+| public_id | UUID         | Unique, auto-generated |
+| username  | VARCHAR(255) | Unique, NOT NULL       |
+| password  | TEXT         | bcrypt hash            |
+
+## Note Table
+
+| Column     | Type        | Constraints                       |
+| ---------- | ----------- | --------------------------------- |
+| id         | SERIAL      | Primary Key                       |
+| public_id  | UUID        | Unique, auto-generated            |
+| title      | TEXT        | NOT NULL                          |
+| body       | TEXT        | Optional                          |
+| created_at | TIMESTAMPTZ | Default NOW()                     |
+| updated_at | TIMESTAMPTZ | Updated automatically             |
+| profile_id | UUID        | Foreign key to profile(public_id) |
+
+---
+
+# Getting Started
+
+## 1. Clone the Repository
+
+```bash
+git clone <your-repo-url>
 cd <repo-folder>
-2. Install dependencies
-bashnpm install
-3. Configure environment variables
-Create a .env file in the project root:
-envACTIVE_PORT=3500
-4. Start the server
-bashnode server.js
-You should see:
-Server is ACTIVE🔥🔥 on http://localhost:3500
+```
 
-API Endpoints
-Base URL: http://localhost:3500
-POST /notes — Create a note
-Creates a new note with a server-generated id and timestamps.
-Request body:
-json{
+## 2. Install Dependencies
+
+```bash
+npm install
+```
+
+## 3. Set Up PostgreSQL
+
+Create a database:
+
+```sql
+CREATE DATABASE notes_db;
+```
+
+You can use:
+
+* Local PostgreSQL installation
+* Neon
+* Supabase
+
+---
+
+# Environment Variables
+
+Create a `.env` file in the root directory.
+
+```env
+ACTIVE_PORT=8800
+
+DB_USER=postgres
+DB_HOST=localhost
+DB_NAME=notes_db
+DB_PASSWORD=your_postgres_password
+DB_PORT=5432
+
+JWT_SECRET=your_jwt_secret_here
+```
+
+---
+
+# Running the Server
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+Expected output:
+
+```txt
+Database connected Successfully
+Server is ACTIVE🔥🔥 on http://localhost:8800
+```
+
+Tables are automatically created on startup using `IF NOT EXISTS`.
+
+---
+
+# Authentication Flow
+
+1. Register an account
+2. Login to receive a JWT token
+3. Include the token in protected requests
+4. Access `/notes` endpoints
+
+Authorization header format:
+
+```txt
+Authorization: Bearer <your-token>
+```
+
+---
+
+# API Endpoints
+
+Base URL:
+
+```txt
+http://localhost:8800
+```
+
+---
+
+# Authentication Routes
+
+## Register User
+
+### POST `/auth/register`
+
+### Request Body
+
+```json
+{
+  "username": "femiprecious",
+  "password": "supersecret123"
+}
+```
+
+### Success Response — 201 Created
+
+```json
+{
+  "message": "Account Created Successfully",
+  "data": {
+    "id": 1,
+    "public_id": "uuid-value",
+    "username": "femiprecious"
+  }
+}
+```
+
+### Possible Errors
+
+| Status | Meaning                      |
+| ------ | ---------------------------- |
+| 400    | Missing username or password |
+| 409    | Username already exists      |
+
+### Example cURL
+
+```bash
+curl -X POST http://localhost:8800/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"femiprecious","password":"supersecret123"}'
+```
+
+---
+
+## Login User
+
+### POST `/auth/login`
+
+### Request Body
+
+```json
+{
+  "username": "femiprecious",
+  "password": "supersecret123"
+}
+```
+
+### Success Response — 200 OK
+
+```json
+{
+  "message": "Login Successful",
+  "token": "jwt-token-here"
+}
+```
+
+### Possible Errors
+
+| Status | Meaning                      |
+| ------ | ---------------------------- |
+| 400    | Missing credentials          |
+| 401    | Invalid username or password |
+
+### Example cURL
+
+```bash
+curl -X POST http://localhost:8800/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"femiprecious","password":"supersecret123"}'
+```
+
+---
+
+## Logout User
+
+### POST `/auth/logout`
+
+### Success Response — 200 OK
+
+```json
+{
+  "message": "Logged out successfully"
+}
+```
+
+---
+
+# Notes Routes (Protected)
+
+All routes below require a valid JWT.
+
+---
+
+## Create Note
+
+### POST `/notes`
+
+### Request Body
+
+```json
+{
   "title": "Buy milk",
   "body": "2% from the corner store"
 }
-Response — 201 Created
-json{
-  "id": "8f3a1b2c-4d5e-6f70-8a9b-0c1d2e3f4a5b",
+```
+
+### Success Response — 201 Created
+
+```json
+{
+  "id": 1,
+  "public_id": "uuid-value",
   "title": "Buy milk",
   "body": "2% from the corner store",
-  "createdAt": "2026-05-25T14:30:00.000Z",
-  "updatedAt": "2026-05-25T14:30:00.000Z"
+  "created_at": "2026-05-28T14:30:00.000Z",
+  "updated_at": "2026-05-28T14:30:00.000Z",
+  "profile_id": "user-uuid"
 }
-curl:
-bashcurl -X POST http://localhost:3500/notes \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Buy milk","body":"2% from the corner store"}'
+```
 
-GET /notes — List notes
-Returns notes for the current page, optionally sorted.
-Query parameters (all optional):
-ParamTypeDefaultDescriptionpageint1Page number (1-indexed)limitint10Items per pagesortstring—One of title, newest, lastupdated
-Response — 200 OK — Array of notes for the requested page.
-Error — 400 Bad Request — Invalid sort value.
-json{ "error": "sort must be one of: title, newest, lastupdated" }
-curl examples:
-bash# Default list (page 1, 10 per page)
-curl http://localhost:3500/notes
+---
 
-# Page 2 with 5 per page
-curl "http://localhost:3500/notes?page=2&limit=5"
+## Get All Notes
 
-# Newest first
-curl "http://localhost:3500/notes?sort=newest"
+### GET `/notes`
 
-# By title, paginated
-curl "http://localhost:3500/notes?sort=title&page=1&limit=3"
+Returns all notes belonging to the authenticated user.
 
-GET /notes/:id — Read a single note
-Response — 200 OK — The note object.
-Error — 404 Not Found — If the id doesn't exist.
-curl:
-bashcurl http://localhost:3500/notes/8f3a1b2c-4d5e-6f70-8a9b-0c1d2e3f4a5b
+### Success Response — 200 OK
 
-PUT /notes/:id — Replace a note (full update)
-PUT is idempotent — calling it N times with the same payload yields the same result. The original createdAt is preserved; updatedAt is refreshed.
-Request body:
-json{
+```json
+[
+  {
+    "title": "Buy milk"
+  }
+]
+```
+
+---
+
+## Get Single Note
+
+### GET `/notes/:id`
+
+### Success Response — 200 OK
+
+Returns a single note.
+
+### Error
+
+| Status | Meaning        |
+| ------ | -------------- |
+| 404    | Note not found |
+
+---
+
+## Replace Note
+
+### PUT `/notes/:id`
+
+Fully replaces the note.
+
+### Request Body
+
+```json
+{
   "title": "Updated title",
-  "body": "Replaced body content"
+  "body": "Updated body"
 }
-Response — 200 OK — The updated note.
-Error — 404 Not Found — If the id doesn't exist.
-curl:
-bashcurl -X PUT http://localhost:3500/notes/<id> \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Updated","body":"New body"}'
+```
 
-PATCH /notes/:id — Partial update
-Only the fields included in the request body are modified. Omitted fields are left untouched.
-Request body (any subset of title, body):
-json{ "title": "Just changing the title" }
-Response — 200 OK — The updated note.
-Error — 404 Not Found — If the id doesn't exist.
-curl:
-bashcurl -X PATCH http://localhost:3500/notes/<id> \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Patched title"}'
+### Success Response — 200 OK
 
-DELETE /notes/:id — Delete a note
-Response — 204 No Content — Empty body on success.
-Error — 404 Not Found — If the id doesn't exist.
-curl:
-bashcurl -X DELETE http://localhost:3500/notes/<id>
+Returns the updated note.
 
-Status Code Reference
-CodeMeaning200OK — successful read or update201Created — successful resource creation204No Content — successful delete (no body)400Bad Request — invalid query parameter404Not Found — resource doesn't exist500Internal Server Error — unhandled exception
+---
 
-Design Notes
-PUT vs PATCH
+## Update Note Partially
 
-PUT is for full replacement. The client sends the complete representation and the server overwrites the resource. Idempotent: same payload N times → same result.
-PATCH is for partial update. Only the fields present in the request body are changed. Useful for updating one field without re-sending the whole resource.
+### PATCH `/notes/:id`
 
-Both PUT and DELETE are idempotent. POST is not — two identical POSTs create two notes with different ids.
-Why DELETE returns 204
-204 No Content explicitly signals "the action succeeded and there's no body to send." A 200 OK with a "Note deleted" message would be redundant — the client already knows the operation succeeded from the status code.
-In-memory storage
-Notes are stored in a JavaScript array in db/database.js, seeded with sample data on boot. Restarting the server resets state. A persistent database layer is planned for Day 2 of the codeathon.
+Updates only the provided fields.
 
-Request Logging
-A custom middleware logs every incoming request to the console:
-[2026-05-25T14:30:00.000Z] POST /notes 201 4
-[2026-05-25T14:30:05.123Z] GET /notes 200 1
-[2026-05-25T14:30:10.456Z] DELETE /notes/abc-123 204 1
-Format: [ISO timestamp] METHOD url statusCode durationMs
+### Request Body
 
-Testing
-Use the curl commands in each endpoint section above, or import them into Postman / Insomnia.
-Screenshots of working requests are in the screenshots/ directory.
+```json
+{
+  "title": "New title only"
+}
+```
 
-Author
-Built by Femi Oyetade — IEEE × GCE Codeathon Day 1, Backend Track.
+### Success Response — 200 OK
+
+Returns the updated note.
+
+---
+
+## Delete Note
+
+### DELETE `/notes/:id`
+
+### Success Response — 204 No Content
+
+Returns an empty response body.
+
+---
+
+# Status Codes
+
+| Code | Meaning               |
+| ---- | --------------------- |
+| 200  | Successful request    |
+| 201  | Resource created      |
+| 204  | Successful deletion   |
+| 400  | Bad request           |
+| 401  | Unauthorized          |
+| 404  | Resource not found    |
+| 409  | Conflict              |
+| 500  | Internal server error |
+
+---
+
+# Design Decisions
+
+## Why PostgreSQL?
+
+PostgreSQL provides:
+
+* Persistent storage
+* Data integrity
+* Foreign-key support
+* Better scalability
+* Concurrency safety
+
+---
+
+## Why bcrypt?
+
+Passwords are hashed before storage.
+
+Benefits:
+
+* Plain-text passwords are never saved
+* Each password gets a random salt
+* Safer against database leaks
+
+---
+
+## Why JWT?
+
+JWT allows stateless authentication.
+
+Workflow:
+
+1. User logs in
+2. Server signs a token
+3. Client stores the token
+4. Token is sent with protected requests
+5. Middleware verifies the token
+
+---
+
+## Why Use UUIDs?
+
+UUIDs are safer for public APIs because they:
+
+* Prevent predictable URLs
+* Reduce enumeration attacks
+* Separate internal IDs from public IDs
+
+---
+
+## PUT vs PATCH
+
+| Method | Purpose          |
+| ------ | ---------------- |
+| PUT    | Full replacement |
+| PATCH  | Partial update   |
+
+Both PUT and DELETE are idempotent.
+
+---
+
+## Why DELETE Returns 204
+
+`204 No Content` means:
+
+* The operation succeeded
+* No response body is needed
+
+---
+
+# Request Logging
+
+Example logs:
+
+```txt
+[2026-05-28T14:30:00.000Z] POST /auth/register 201 161
+[2026-05-28T14:30:05.123Z] POST /auth/login 200 174
+[2026-05-28T14:30:10.456Z] GET /notes 200 42
+```
+
+Format:
+
+```txt
+[ISO Timestamp] METHOD URL STATUS_CODE DURATION_MS
+```
+
+---
+
+# Testing
+
+You can test the API using:
+
+* Postman
+* Insomnia
+* Thunder Client
+* curl
+
+Typical workflow:
+
+1. Register a user
+2. Login to receive a JWT
+3. Add the JWT to request headers
+4. Access protected `/notes` routes
+
+---
+
+# Author
+
+Built by **Femi Oyetade** for the IEEE × GitHub Campus Experts Codeathon — Backend Track.
